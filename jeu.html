@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Casse-briques</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    nav {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: #16213e;
+    }
+
+    nav .logo {
+      font-size: 1.3rem;
+      font-weight: bold;
+      background: linear-gradient(45deg, #e94560, #ff8c42);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    nav ul { display: flex; gap: 1.5rem; list-style: none; }
+
+    nav a {
+      color: #ccc;
+      text-decoration: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    nav a:hover, nav a.active { color: #fff; background: rgba(233, 69, 96, 0.25); }
+
+    h1 { margin: 1.5rem 0 0.5rem; font-size: 1.4rem; }
+
+    #infos { color: #ff8c42; margin-bottom: 1rem; }
+
+    canvas {
+      background: #16213e;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      touch-action: none;
+    }
+
+    #message {
+      margin-top: 1rem;
+      min-height: 1.5rem;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <span class="logo">MonSite</span>
+    <ul>
+      <li><a href="index.html">Accueil</a></li>
+      <li><a href="jeu.html" class="active">Jeu</a></li>
+      <li><a href="#">À propos</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+  </nav>
+
+  <h1>🎮 Casse-briques</h1>
+  <div id="infos">Score : 0 | Vies : 3</div>
+  <canvas id="jeu" width="480" height="360"></canvas>
+  <p id="message">Cliquez ou appuyez sur Espace pour lancer la balle.</p>
+
+  <script>
+    const cvs = document.getElementById('jeu');
+    const ctx = cvs.getContext('2d');
+    const infos = document.getElementById('infos');
+    const message = document.getElementById('message');
+
+    // Raquette
+    const paddle = { w: 80, h: 12, x: 200, y: 340, vitesse: 7 };
+    let gauche = false, droite = false;
+
+    // Balle
+    const balle = { x: 240, y: 300, r: 7, vx: 0, vy: 0, vitesse: 4 };
+    let lancee = false;
+
+    // Briques
+    const cols = 8, rows = 5, bw = 52, bh = 18, gap = 5, top = 40, left = 12;
+    const couleurs = ['#e94560', '#ff8c42', '#ffd166', '#06d6a0', '#4cc9f0'];
+    let briques = [];
+
+    let score = 0, vies = 3, termine = false;
+
+    function initBriques() {
+      briques = [];
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+          briques.push({ x: left + c * (bw + gap), y: top + r * (bh + gap), vivante: true, couleur: couleurs[r] });
+    }
+    initBriques();
+
+    // Contrôles clavier
+    document.addEventListener('keydown', e => {
+      if (e.code === 'ArrowLeft') gauche = true;
+      if (e.code === 'ArrowRight') droite = true;
+      if (e.code === 'Space' && !lancee) { lancer(); e.preventDefault(); }
+    });
+    document.addEventListener('keyup', e => {
+      if (e.code === 'ArrowLeft') gauche = false;
+      if (e.code === 'ArrowRight') droite = false;
+    });
+
+    // Contrôles souris / tactile
+    function deplacerSouris(e) {
+      const rect = cvs.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      paddle.x = Math.max(0, Math.min(cvs.width - paddle.w, x - paddle.w / 2));
+    }
+    cvs.addEventListener('mousemove', deplacerSouris);
+    cvs.addEventListener('touchmove', e => { deplacerSouris(e); e.preventDefault(); });
+    cvs.addEventListener('click', () => { if (!lancee) lancer(); });
+
+    function lancer() {
+      lancee = true;
+      balle.vx = (Math.random() > 0.5 ? 1 : -1) * balle.vitesse * 0.7;
+      balle.vy = -balle.vitesse;
+      message.textContent = '';
+    }
+
+    function reinitialiserBalle() {
+      lancee = false;
+      balle.x = paddle.x + paddle.w / 2;
+      balle.y = paddle.y - balle.r - 1;
+      balle.vx = 0; balle.vy = 0;
+    }
+
+    function maj() {
+      if (gauche) paddle.x = Math.max(0, paddle.x - paddle.vitesse);
+      if (droite) paddle.x = Math.min(cvs.width - paddle.w, paddle.x + paddle.vitesse);
+
+      if (!lancee) { reinitialiserBalle(); return; }
+
+      balle.x += balle.vx;
+      balle.y += balle.vy;
+
+      // Murs
+      if (balle.x - balle.r < 0 || balle.x + balle.r > cvs.width) balle.vx *= -1;
+      if (balle.y - balle.r < 0) balle.vy *= -1;
+
+      // Balle perdue
+      if (balle.y - balle.r > cvs.height) {
+        vies--;
+        if (vies <= 0) { fin('💀 Perdu ! Rechargez la page pour rejouer.'); return; }
+        reinitialiserBalle();
+        message.textContent = 'Balle perdue ! Cliquez ou Espace pour relancer.';
+        majInfos();
+        return;
+      }
+
+      // Raquette
+      if (balle.vy > 0 &&
+          balle.y + balle.r >= paddle.y &&
+          balle.y + balle.r <= paddle.y + paddle.h &&
+          balle.x >= paddle.x && balle.x <= paddle.x + paddle.w) {
+        // L'angle dépend du point d'impact sur la raquette
+        const impact = (balle.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
+        balle.vx = impact * balle.vitesse * 0.9;
+        balle.vy = -Math.abs(balle.vy);
+      }
+
+      // Briques
+      for (const b of briques) {
+        if (!b.vivante) continue;
+        if (balle.x + balle.r > b.x && balle.x - balle.r < b.x + bw &&
+            balle.y + balle.r > b.y && balle.y - balle.r < b.y + bh) {
+          b.vivante = false;
+          score += 10;
+          majInfos();
+          // Rebond : on détecte le côté touché
+          const chevaucheX = Math.min(balle.x + balle.r - b.x, b.x + bw - (balle.x - balle.r));
+          const chevaucheY = Math.min(balle.y + balle.r - b.y, b.y + bh - (balle.y - balle.r));
+          if (chevaucheX < chevaucheY) balle.vx *= -1; else balle.vy *= -1;
+
+          if (score === cols * rows * 10) fin('🏆 Gagné ! Bravo !');
+          break;
+        }
+      }
+    }
+
+    function fin(texte) {
+      termine = true;
+      lancee = false;
+      message.textContent = texte;
+    }
+
+    function majInfos() {
+      infos.textContent = `Score : ${score} | Vies : ${vies}`;
+    }
+
+    function dessiner() {
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+      // Briques
+      for (const b of briques) {
+        if (!b.vivante) continue;
+        ctx.fillStyle = b.couleur;
+        ctx.fillRect(b.x, b.y, bw, bh);
+      }
+
+      // Raquette
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+
+      // Balle
+      ctx.beginPath();
+      ctx.arc(balle.x, balle.y, balle.r, 0, Math.PI * 2);
+      ctx.fillStyle = '#ff8c42';
+      ctx.fill();
+
+      if (!lancee && !termine) {
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Cliquez ou Espace pour lancer', cvs.width / 2, 250);
+      }
+    }
+
+    function boucle() {
+      if (!termine) maj();
+      dessiner();
+      requestAnimationFrame(boucle);
+    }
+    boucle();
+  </script>
+
+</body>
+</html>
