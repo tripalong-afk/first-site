@@ -56,6 +56,7 @@
       border-radius: 10px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
       touch-action: none;
+      outline: none; /* Évite la bordure de focus par défaut */
     }
 
     #message {
@@ -79,14 +80,18 @@
 
   <h1>🎮 Casse-briques</h1>
   <div id="infos">Score : 0 | Vies : 3</div>
-  <canvas id="jeu" width="480" height="360"></canvas>
-  <p id="message">Cliquez ou appuyez sur Espace pour lancer la balle.</p>
+  <!-- Ajout de tabindex="0" pour permettre au canvas de recevoir le focus clavier -->
+  <canvas id="jeu" width="480" height="360" tabindex="0"></canvas>
+  <p id="message">Cliquez sur le jeu ou appuyez sur Espace pour lancer la balle.</p>
 
   <script>
     const cvs = document.getElementById('jeu');
     const ctx = cvs.getContext('2d');
     const infos = document.getElementById('infos');
     const message = document.getElementById('message');
+
+    // Donner le focus au canvas au chargement pour capter les touches immédiatement
+    cvs.focus();
 
     // Raquette
     const paddle = { w: 80, h: 12, x: 200, y: 340, vitesse: 7 };
@@ -97,7 +102,7 @@
     let lancee = false;
 
     // Briques
-    const cols = 8, rows = 5, bw = 52, bh = 18, gap = 5, top = 40, left = 12;
+    const cols = 8, rows = 5, bw = 52, bh = 18, gap = 5, topOffset = 40, left = 12;
     const couleurs = ['#e94560', '#ff8c42', '#ffd166', '#06d6a0', '#4cc9f0'];
     let briques = [];
 
@@ -107,19 +112,25 @@
       briques = [];
       for (let r = 0; r < rows; r++)
         for (let c = 0; c < cols; c++)
-          briques.push({ x: left + c * (bw + gap), y: top + r * (bh + gap), vivante: true, couleur: couleurs[r] });
+          briques.push({ x: left + c * (bw + gap), y: topOffset + r * (bh + gap), vivante: true, couleur: couleurs[r] });
     }
     initBriques();
 
-    // Contrôles clavier
+    // Contrôles clavier (Écoute globale sur le document mais avec vérification élargie pour l'espace)
     document.addEventListener('keydown', e => {
-      if (e.code === 'ArrowLeft') gauche = true;
-      if (e.code === 'ArrowRight') droite = true;
-      if (e.code === 'Space' && !lancee) { lancer(); e.preventDefault(); }
+      if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft') { gauche = true; e.preventDefault(); }
+      if (e.code === 'ArrowRight' || e.key === 'ArrowRight') { droite = true; e.preventDefault(); }
+      if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar') {
+        if (!lancee && !termine) {
+          lancer();
+        }
+        e.preventDefault(); // Empêche le scroll de la page avec la barre d'espace
+      }
     });
+
     document.addEventListener('keyup', e => {
-      if (e.code === 'ArrowLeft') gauche = false;
-      if (e.code === 'ArrowRight') droite = false;
+      if (e.code === 'ArrowLeft' || e.key === 'ArrowLeft') gauche = false;
+      if (e.code === 'ArrowRight' || e.key === 'ArrowRight') droite = false;
     });
 
     // Contrôles souris / tactile
@@ -130,7 +141,10 @@
     }
     cvs.addEventListener('mousemove', deplacerSouris);
     cvs.addEventListener('touchmove', e => { deplacerSouris(e); e.preventDefault(); });
-    cvs.addEventListener('click', () => { if (!lancee) lancer(); });
+    cvs.addEventListener('click', () => { 
+      cvs.focus(); // Remet le focus sur le canvas au clic
+      if (!lancee && !termine) lancer(); 
+    });
 
     function lancer() {
       lancee = true;
@@ -174,7 +188,6 @@
           balle.y + balle.r >= paddle.y &&
           balle.y + balle.r <= paddle.y + paddle.h &&
           balle.x >= paddle.x && balle.x <= paddle.x + paddle.w) {
-        // L'angle dépend du point d'impact sur la raquette
         const impact = (balle.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
         balle.vx = impact * balle.vitesse * 0.9;
         balle.vy = -Math.abs(balle.vy);
@@ -188,7 +201,7 @@
           b.vivante = false;
           score += 10;
           majInfos();
-          // Rebond : on détecte le côté touché
+          
           const chevaucheX = Math.min(balle.x + balle.r - b.x, b.x + bw - (balle.x - balle.r));
           const chevaucheY = Math.min(balle.y + balle.r - b.y, b.y + bh - (balle.y - balle.r));
           if (chevaucheX < chevaucheY) balle.vx *= -1; else balle.vy *= -1;
