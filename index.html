@@ -2,9 +2,110 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mon site</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+    }
+
+    /* --- Barre de menu --- */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background: #16213e;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+
+    nav .logo {
+      font-size: 1.3rem;
+      font-weight: bold;
+      background: linear-gradient(45deg, #e94560, #ff8c42);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    nav ul {
+      display: flex;
+      gap: 1.5rem;
+      list-style: none;
+    }
+
+    nav a {
+      color: #ccc;
+      text-decoration: none;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    nav a\:hover, nav a.active {
+      color: #fff;
+      background: rgba(233, 69, 96, 0.25);
+    }
+
+    /* --- Horloge dynamique --- */
+    #horloge {
+      font-size: 0.9rem;
+      color: #ff8c42;
+      font-variant-numeric: tabular-nums; /* chiffres à largeur fixe */
+    }
+
+    /* --- Contenu --- */
+    main {
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello World 👋</h1>
+
+  <nav>
+    <span class="logo">MonSite</span>
+    <ul>
+      <li><a href="#" class="active">Accueil</a></li>
+      <li><a href="#">À propos</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+    <div id="horloge">Chargement...</div>
+  </nav>
+
+  <main>
+    <h1>Hello World 👋</h1>
+  </main>
+
+  <script>
+    const horloge = document.getElementById('horloge');
+
+    function majHorloge() {
+      const maintenant = new Date();
+
+      const date = maintenant.toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      });
+
+      const heure = maintenant.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+
+      horloge.textContent = `${date} · ${heure}`;
+    }
+
+    // Mise à jour immédiate, puis toutes les secondes
+    majHorloge();
+    setInterval(majHorloge, 1000);
+  </script>
+
 </body>
 </html>
