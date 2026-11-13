@@ -1,0 +1,13 @@
+name: Check website links
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Chaque lundi à 8 h UTC
+  workflow_dispatch: # Permet de lancer le contrôle manuellement
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check links
+        run: npx --yes linkinator https://tripalong-afk.github.io/first-site/index.html --recurse
